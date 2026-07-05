@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>长征第一章·天堑与通途——渡口难度互动雷达图</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: #FDF8F0;
+    color: #333;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  header {
+    text-align: center;
+    padding: 20px 0 30px;
+    border-bottom: 1px solid #E8DFD0;
+    margin-bottom: 30px;
+  }
+  header h1 {
+    font-size: 28px;
+    color: #8B2500;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 24px;
+  }
+  @media (max-width: 1100px) {
+    .main-grid { grid-template-columns: 1fr; }
+  }
+  .chart-card {
+    background: #fff;
+    border: 1px solid #E8DFD0;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .chart-card h2 {
+    color: #8B2500;
+    font-size: 18px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #E8DFD0;
+  }
+  .chart-wrapper {
+    position: relative;
+    height: 560px;
+  }
+  .side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .info-card {
+    background: #fff;
+    border: 1px solid #E8DFD0;
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .info-card h3 {
+    color: #8B2500;
+    font-size: 15px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #E8DFD0;
+  }
+  .crossing-list { list-style: none; }
+  .crossing-item {
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    background: #FAF5ED;
+    border-left: 3px solid;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .crossing-item:hover {
+    background: #F0E8D8;
+    transform: translateX(4px);
+  }
+  .crossing-item.disabled {
+    opacity: 0.35;
+  }
+  .crossing-name {
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+  .crossing-desc {
+    font-size: 12px;
+    color: #888;
+    line-height: 1.5;
+  }
+  .score-bar {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .score-dot {
+    width: 14px;
+    height: 6px;
+    border-radius: 2px;
+    background: #E0D8CC;
+  }
+  .score-dot.active {
+    background: currentColor;
+  }
+  .basis-item {
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #FAF5ED;
+    border-radius: 8px;
+    border-left: 3px solid;
+    transition: all 0.2s;
+  }
+  .basis-item:hover {
+    background: #F0E8D8;
+  }
+  .basis-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .basis-dim {
+    font-size: 13px;
+    font-weight: bold;
+    color: #8B2500;
+  }
+  .basis-score {
+    display: inline-flex;
+    gap: 2px;
+  }
+  .star {
+    font-size: 13px;
+    color: #D4A017;
+  }
+  .star.empty {
+    color: #E0D8CC;
+  }
+  .basis-num {
+    font-size: 12px;
+    color: #999;
+    margin-left: 6px;
+  }
+  .basis-text {
+    font-size: 12px;
+    color: #555;
+    line-height: 1.6;
+    border-left: 2px solid rgba(139,37,0,0.2);
+    padding-left: 8px;
+    margin-top: 4px;
+  }
+  .dim-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .dim-chip {
+    padding: 4px 10px;
+    border-radius: 12px;
+    background: #F0E8D8;
+    color: #666;
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .dim-chip.active {
+    background: #8B2500;
+    color: #fff;
+    font-weight: bold;
+  }
+  .footer-note {
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #E8DFD0;
+    line-height: 1.6;
+  }
+  .stats-summary {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .stat-box {
+    background: #FAF5ED;
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+  }
+  .stat-box .num {
+    font-size: 22px;
+    font-weight: bold;
+    color: #8B2500;
+  }
+  .stat-box .lbl {
+    font-size: 11px;
+    color: #888;
+    margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>长征第一章·天堑与通途</h1>
+  </header>
+
+  <div class="main-grid">
+    <!-- 雷达图主区域 -->
+    <div class="chart-card">
+      <h2>四渡口难度多维对比</h2>
+      <div class="dim-selector" id="dimSelector"></div>
+      <div class="chart-wrapper">
+        <canvas id="radarChart"></canvas>
+      </div>
+    </div>
+
+    <!-- 侧栏 -->
+    <div class="side-panel">
+      <!-- 渡口列表 -->
+      <div class="info-card">
+        <h3>渡口列表（点击切换显示）</h3>
+        <ul class="crossing-list" id="crossingList"></ul>
+      </div>
+
+      <!-- 评分依据 -->
+      <div class="info-card">
+        <h3>评分依据</h3>
+        <select id="crossingSelect" style="width:100%;padding:8px;margin-bottom:14px;background:#FAF5ED;color:#333;border:1px solid #E8DFD0;border-radius:6px;">
+        </select>
+        <div id="basisPanel"></div>
+      </div>
+
+      <!-- 统计概览 -->
+      <div class="info-card">
+        <h3>难度统计</h3>
+        <div class="stats-summary" id="statsSummary"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    评分维度：自然险阻 · 敌军压力 · 渡口有限性 · 时间紧迫性 · 地形陡峭 · 决策难度（1-5分）<br>
+    核心结论：通途并非天然存在——渡河是红军在地理边界上完成的空间转译，把阻隔转译为通道，把天险转译为机动。
+  </div>
+</div>
+
+<script>
+// 数据
+const dimensions = ['自然险阻', '敌军压力', '渡口有限性', '时间紧迫性', '地形陡峭', '决策难度'];
+
+const crossings = {
+  '湘江': {
+    color: '#d62728',
+    scores: [3, 5, 5, 4, 2, 2],
+    desc: '敌情+渡口有限 → 惨烈硬闯。湘江是水文屏障，敌军部署使渡口成为生死通道，慢一步就被空间锁住。',
+    basis: [
+      '湘江本身为水文屏障，但两岸地形不像大渡河那样陡峭，自然险阻中等偏上',
+      '蒋介石调集中央军、湘军、桂军、粤军近30万兵力，在全州、兴安、灌阳三县构筑"铁三角口袋阵"，敌情为四渡口之最',
+      '红军仅控制界首至脚山铺间约30公里湘江两岸，渡点稀缺直接导致空间锁死',
+      '1934年12月1日敌军全线总攻，傍晚湘江沿岸渡口全部被占，红34师被截断东岸全军覆没',
+      '湘江两岸以丘陵为主，未出现大渡河式的悬崖绝壁与狭窄河谷',
+      '博古、李德"左"倾错误指挥，毛泽东改变进军方向建议被束之高阁，红军被迫硬闯口袋阵'
+    ]
+  },
+  '乌江': {
+    color: '#ff7f0e',
+    scores: [4, 3, 3, 4, 3, 3],
+    desc: '寻薄弱处 → 快速突破。天险河流，找到敌军薄弱处、掌握渡口信息、快速组织行动，把天险变成通道。',
+    basis: [
+      '江界河渡口江面宽200余米，水深流急，两岸悬崖绝壁，素有"乌江天险"之称，当地俗语"横走天下路，难过乌江渡"',
+      '黔军侯之担部3旅在北岸布防，主渡口重兵+碉堡，火金山设预备队；薛岳兵团追兵距红军仅两天路程',
+      '老虎洞小渡口仅有1个排守兵，红军找到敌军薄弱处；用60余个竹筏+浮桥渡江',
+      '若不能在薛岳部到达前渡江即陷入背水作战险境，朱德电令"偷渡部队不应小于一个团"',
+      '南岸5000米陡坡+北岸同类山坡，悬崖绝壁但未达大渡河30米悬空铁索的极端程度',
+      '耿飚、杨成武实地侦察后定"佯攻老渡口、主攻老虎洞"计策，神炮手赵章成3发迫击炮弹定乾坤'
+    ]
+  },
+  '金沙江': {
+    color: '#2ca02c',
+    scores: [4, 3, 3, 5, 3, 5],
+    desc: '判断时间窗口 → 巧渡避主力。关键不在勇敢，而在对渡口位置、敌军视野、道路连接和时间窗口的判断。',
+    basis: [
+      '金沙江穿行川滇边界深山狭谷，江面宽阔、水急浪大，两岸高山峻岭，除几个渡口外均为悬崖绝壁',
+      '毛泽东"调虎离山袭金沙"佯攻昆明调出滇军，敌防御空虚；但蒋介石4月28日急电"控制渡口，毁船封江"',
+      '皎平渡仅7只小船、36名艄公7天7夜渡完全军；龙街渡江宽无船、洪门渡水急无法架桥，渡点高度集中',
+      '1935年5月3-9日7天7夜紧迫窗口，蒋介石认定"必渡金沙江无疑"，两天后敌追兵才赶到南岸',
+      '两岸高山峻岭、悬崖绝壁，但未如大渡河30米悬空铁索那般极端',
+      '毛泽东、刘伯承指挥，"调虎离山"+截获敌军用地图+伪装"中央军"骗过区公所文书+智取三县，决策维度最高，"巧招"迭出'
+    ]
+  },
+  '大渡河/泸定桥': {
+    color: '#1f77b4',
+    scores: [5, 3, 5, 5, 5, 4],
+    desc: '地形极端 → 夺桥不容失误。河谷狭窄、桥梁关键、两岸陡峭，任何一点失误都可能造成行军中断。',
+    basis: [
+      '大渡河水流急如"煮沸的黄泥汤"，30余米高空悬铁索，浪头拍击崖壁震破耳膜，自然险阻推到高潮',
+      '守军为川军李全山团，主要矛盾在自然天险而非敌军主力，蒋介石欲让红军"做石达开第二"',
+      '泸定桥是大渡河上"唯一一座可以通行的桥梁"，13根铁索决定通行；敌军拆除桥板只留光铁索',
+      '红四团一昼夜急行军240里山路，对岸川军也打火把连夜增援，红军伪装敌军号谱并行；薛岳追兵3天即到',
+      '桥长103米、13根铁索悬30余米高空，"左侧绝壁、右侧深渊"，两岸陡如刀削',
+      '22勇士踏铁索冒枪林弹雨冲锋，敌放火烧东桥头，4人坠江牺牲；决策难度高但选项已被压缩至极限'
+    ]
+  }
+};
+
+// 状态
+let activeDims = new Set(dimensions);
+let hiddenCrossings = new Set();
+let currentCrossing = '湘江';
+
+// 维度筛选器
+const dimSelector = document.getElementById('dimSelector');
+dimensions.forEach(dim => {
+  const chip = document.createElement('span');
+  chip.className = 'dim-chip active';
+  chip.textContent = dim;
+  chip.dataset.dim = dim;
+  chip.onclick = () => {
+    if (activeDims.has(dim)) {
+      activeDims.delete(dim);
+      chip.classList.remove('active');
+    } else {
+      activeDims.add(dim);
+      chip.classList.add('active');
+    }
+    updateChart();
+  };
+  dimSelector.appendChild(chip);
+});
+
+// 渡口列表
+const crossingList = document.getElementById('crossingList');
+Object.entries(crossings).forEach(([name, data]) => {
+  const li = document.createElement('li');
+  li.className = 'crossing-item';
+  li.style.borderLeftColor = data.color;
+  li.dataset.name = name;
+  li.innerHTML = `
+    <div class="crossing-name" style="color:${data.color}">${name}</div>
+    <div class="crossing-desc">${data.desc}</div>
+    <div class="score-bar" style="color:${data.color}">
+      ${Array(5).fill().map((_,i) => `<span class="score-dot ${i < Math.max(...data.scores) ? 'active' : ''}"></span>`).join('')}
+    </div>
+  `;
+  li.onclick = () => {
+    if (hiddenCrossings.has(name)) {
+      hiddenCrossings.delete(name);
+      li.classList.remove('disabled');
+    } else {
+      hiddenCrossings.add(name);
+      li.classList.add('disabled');
+    }
+    updateChart();
+  };
+  crossingList.appendChild(li);
+});
+
+// 下拉选择
+const crossingSelect = document.getElementById('crossingSelect');
+Object.keys(crossings).forEach(name => {
+  const opt = document.createElement('option');
+  opt.value = name;
+  opt.textContent = name;
+  crossingSelect.appendChild(opt);
+});
+crossingSelect.onchange = () => {
+  currentCrossing = crossingSelect.value;
+  buildBasis();
+};
+crossingSelect.value = currentCrossing;
+
+// 评分依据
+const basisPanel = document.getElementById('basisPanel');
+function buildBasis() {
+  basisPanel.innerHTML = '';
+  const data = crossings[currentCrossing];
+  dimensions.forEach((dim, i) => {
+    const score = data.scores[i];
+    const item = document.createElement('div');
+    item.className = 'basis-item';
+    item.style.borderLeftColor = data.color;
+    const stars = Array(5).fill().map((_, k) =>
+      `<span class="star ${k < score ? '' : 'empty'}">★</span>`
+    ).join('');
+    item.innerHTML = `
+      <div class="basis-head">
+        <span class="basis-dim">${dim}</span>
+        <span>
+          <span class="basis-score">${stars}</span>
+          <span class="basis-num">${score}/5</span>
+        </span>
+      </div>
+      <div class="basis-text">${data.basis[i]}</div>
+    `;
+    basisPanel.appendChild(item);
+  });
+}
+buildBasis();
+
+// 统计
+function updateStats() {
+  const statsDiv = document.getElementById('statsSummary');
+  statsDiv.innerHTML = '';
+  Object.entries(crossings).forEach(([name, data]) => {
+    const total = data.scores.reduce((a,b)=>a+b, 0);
+    const max = Math.max(...data.scores);
+    const box = document.createElement('div');
+    box.className = 'stat-box';
+    box.innerHTML = `
+      <div class="num" style="color:${data.color}">${total}</div>
+      <div class="lbl">${name}<br>总分/峰值${max}</div>
+    `;
+    statsDiv.appendChild(box);
+  });
+}
+updateStats();
+
+// 雷达图
+const ctx = document.getElementById('radarChart').getContext('2d');
+let chart;
+
+function buildChartData() {
+  const activeDimsArr = dimensions.filter(d => activeDims.has(d));
+  const datasets = [];
+  Object.entries(crossings).forEach(([name, data]) => {
+    if (hiddenCrossings.has(name)) return;
+    const filtered = activeDimsArr.map(d => data.scores[dimensions.indexOf(d)]);
+    datasets.push({
+      label: name,
+      data: filtered,
+      backgroundColor: data.color + '33',
+      borderColor: data.color,
+      borderWidth: 2.5,
+      pointBackgroundColor: data.color,
+      pointBorderColor: '#fff',
+      pointHoverRadius: 8,
+      pointHoverBorderWidth: 3,
+      pointRadius: 5
+    });
+  });
+  return { labels: activeDimsArr, datasets };
+}
+
+function updateChart() {
+  if (chart) chart.destroy();
+  const cfg = buildChartData();
+  chart = new Chart(ctx, {
+    type: 'radar',
+    data: cfg,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        r: {
+          min: 0,
+          max: 5.5,
+          ticks: { stepSize: 1, color: '#888', backdropColor: 'transparent', font: { size: 11 } },
+          grid: { color: 'rgba(0,0,0,0.08)' },
+          angleLines: { color: 'rgba(0,0,0,0.1)' },
+          pointLabels: { color: '#8B2500', font: { size: 13, weight: 'bold' } }
+        }
+      },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#333', font: { size: 13 }, padding: 16, usePointStyle: true }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.85)',
+          titleColor: '#ffd700',
+          bodyColor: '#fff',
+          padding: 12,
+          borderColor: '#444',
+          borderWidth: 1,
+          callbacks: {
+            afterLabel: function(ctx) {
+              const name = ctx.dataset.label;
+              return '\n' + crossings[name].desc;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+updateChart();
+</script>
+</body>
+</html>
